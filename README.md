@@ -8,10 +8,11 @@ The model itself is defined using Keras in c4trainer.py to be a 3-layer convolut
 
 The epoch, layer node, max duplicate, and dataset sample counts were all determined by mostly arbitrary experiment. No configuration with a dataset over 10,000 achieved >80% validation accuracy while maintaining a >90% win rate. 
 
+
 Things to try:
--changing init function for model weights
--better nondeterministic model play
--experiment with bigger board size and win length
--?
+ - changing init function for model weights
+ - better nondeterministic model play
+ - experiment with bigger board size and win length
+ - ?
 
 Thanks for looking!
