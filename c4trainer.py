@@ -13,9 +13,9 @@ NUM_ROWS = 6
 NUM_COLS = 7
 batch_size = 32
 nb_classes = 3 # red win, blue win, tie
-nb_epoch = 20
+nb_epoch = 10
 
-labels = c4g.recordGamesDupeLimit(1000, 20)
+labels = c4g.recordGamesDupeLimit(2000, 20)
 teDex = random.sample(xrange(len(labels)), len(labels)/8)
 test = [labels[i] for i in teDex]
 train = [labels[i] for i in xrange(len(labels)) if i not in teDex]

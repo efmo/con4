@@ -18,6 +18,7 @@ class ConnectFourGame:
         self.colheights = [0] * NUM_COLS
         self.history = []
         self.winner = 0
+        self.verbose = 0
         
     def algoMove(self, player):
         
@@ -63,23 +64,61 @@ class ConnectFourGame:
         self.colheights[nextMove] += 1
         return True
         
+    # Simple model move that always takes the highest probability prediction.
     def modelMove(self, player, model):
         moves = []
-        probs = []
         playerDex = 0 if player == 1 else 1
         for i in range(NUM_COLS):
             if self.colheights[i] < NUM_ROWS:
-                moves.append(i)
                 mBoard = numpy.copy(self.board.reshape(1, 6, 7))
                 mBoard[0, self.colheights[i], i] = player
                 pred = model.predict(numpy.array([mBoard]), 1, 0)
-                probs.append(pred[0, playerDex])
+                moves.append((i,pred[0, playerDex]))
                 
         if len(moves) == 0:
             return False
+        moves.sort(key=lambda x: x[1], reverse=True)
 
+        nextMove = moves[0][0]
+
+        self.board[self.colheights[nextMove], nextMove] = player
+        self.colheights[nextMove] += 1
+        return True
         
-        nextMove = moves[probs.index(max(probs))]
+    # Randomly chooses a model move from a probability distribution of available moves.
+    # Allows for diversity of model moves while still favoring whatever the network predicts.
+    # Prevents model v. model games from being completely deterministic.
+    # Experimental. A trained model using this as is performs very poorly.
+    def modelPMove(self, player, model):
+        moves = []
+        playerDex = 0 if player == 1 else 1
+        for i in range(NUM_COLS):
+            if self.colheights[i] < NUM_ROWS:
+                mBoard = numpy.copy(self.board.reshape(1, 6, 7))
+                mBoard[0, self.colheights[i], i] = player
+                pred = model.predict(numpy.array([mBoard]), 1, 0)
+                moves.append((i,pred[0, playerDex]))
+                
+        if len(moves) == 0:
+            return False
+        moves.sort(key=lambda x: x[1], reverse=True)
+
+        if(self.verbose):
+            print moves
+        pRange = sum([p for _, p in moves])
+        pMove = random.uniform(0, pRange)
+        
+        nextMove = -1
+        runningTotal = 0
+        for i, p in moves:
+            runningTotal += p
+            if pMove < runningTotal:
+                nextMove = i
+                break
+
+        # Fallback to last move in case of weird float comparison.
+        if nextMove == -1:
+            nextMove = moves[-1][0]
 
         self.board[self.colheights[nextMove], nextMove] = player
         self.colheights[nextMove] += 1
@@ -213,6 +252,7 @@ class ConnectFourGame:
 
     def playModel(self, model, modelPlayer, verbose):
         self.reset()
+        self.verbose = verbose
         # 100 games with model as red, 100 with model as blue.
         currentPlayer = 0
         while(True):
@@ -224,7 +264,6 @@ class ConnectFourGame:
                 if self.modelMove(currentPlayer, model):
                     self.history.append(numpy.copy(self.board))
                     if self.playerHasWon(currentPlayer):
-                        #print("Player " + str(currentPlayer) + " wins!")
                         self.winner = currentPlayer
                         break
                 else:
@@ -240,7 +279,6 @@ class ConnectFourGame:
                     #print("Tie!")
                     break
                     
-        #print 'Model is ' + str(modelPlayer)
         #print self.history
         return (self.winner, self.history)
                         
@@ -259,6 +297,7 @@ class ConnectFourGame:
         print 'Blue W/L/T: ' + str(mbResults.count(BLUE)) + '/' + str(mbResults.count(RED)) + '/' + str(mbResults.count(0))
 
 
+    # Experimental. Only produces interesting results if model games aren't deterministic.
     def evalTwoModels(self, model1, model2):
         self.reset()
         # 1000 games with model1 as red, 1000 with model1 as blue.
